@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+from run_accuracy import RunAccuracy
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="ExactAcc", description="CLI for running experiments for DP accuracy bound synthesis"
+    )
+
+    parser.add_argument(
+        "--mechanism", "-m",
+        help="which mechanism to verify",
+        choices=["rr_count"],
+        required=True
+    )
+
+    parser.add_argument(
+        "--alpha", "-a",
+        help="alpha-beta accuracy alpha parameter",
+        type=int,
+        required=True
+    )
+
+    parser.add_argument(
+        "--num_clients", '-n',
+        help="num clients in distributed dp or number of elements in list for streaming/array queries",
+        required='--mechanism' in sys.argv and 'rr' in sys.argv,
+        type=int
+    )
+
+    parser.add_argument(
+        "--lamb", '-l',
+        help="flip probability in distributed dp or geometric mechanism parameter",
+        required='--mechanism' in sys.argv and 'rr' in sys.argv,
+        type=float
+    )
+    
+    parser.add_argument(
+        "--inference_method", "-im",
+        help="which inference tool will you use?",
+        required=True,
+        choices=['dice_flat']
+    )
+
+    parser.add_argument(
+        "--accuracy_set", "-as",
+        help="which set of inputs will you need to compute accuracy for",
+        required=True,
+        choices=['exhaustive','min_representative']
+    )
+
+    parser.add_argument(
+        "--timeout", '-to',
+        help="timeout for inference in seconds",
+        required=True,
+        type=int
+    )
+
+    parser.add_argument(
+        "--official",
+        help="this flag means the results will be stored as official experiment results",
+        default=False,
+        action='store_true')
+
+    parser.add_argument(
+        "--get_examples",
+        help="if this flag is used, a file is saved which lists the examples in order of ratio",
+        default=False,
+        action='store_true')
+
+    args = parser.parse_args()
+    
+    mech_args = {}
+    if args.mechanism == 'rr_count':
+        mech_args['n'] = args.num_clients
+        mech_args['lamb'] = args.lamb
+    else: raise NotImplementedError
+    
+    exp = RunAccuracy(mechanism=args.mechanism, alpha=args.alpha, mechanism_params=mech_args, inference_method=args.inference_method,accuracy_set=args.accuracy_set,timeout=args.timeout,official=args.official,get_examples=args.get_examples)
+
+    exp.run()

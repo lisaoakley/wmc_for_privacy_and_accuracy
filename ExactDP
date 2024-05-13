@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+from run_privacy import RunPrivacy
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        prog="ExactDP", description="CLI for running experiments for DP privacy bound synthesis"
+    )
+
+    parser.add_argument(
+        "--mechanism", "-m",
+        help="which mechanism to verify",
+        choices=["rr","above_threshold"],
+        required=True
+    )
+
+    parser.add_argument(
+        "--num_clients", '-n',
+        help="num clients in distributed dp or number of elements in list for streaming/array queries",
+        required='--mechanism' in sys.argv and 'rr' in sys.argv,
+        type=int
+    )
+
+    parser.add_argument(
+        "--threshold", '-t',
+        help="integral threshold value for above threshold algorithm",
+        required='--mechanism' in sys.argv and 'above_threshold' in sys.argv,
+        type=int
+    )
+
+    parser.add_argument(
+        "--max_int_value", '-k',
+        help="max int size for integral mechanisms",
+        required='--mechanism' in sys.argv and 'above_threshold' in sys.argv,
+        type=int
+    )
+
+    parser.add_argument(
+        "--lamb", '-l',
+        help="flip probability in distributed dp or geometric mechanism parameter",
+        required='--mechanism' in sys.argv and 'rr' in sys.argv,
+        type=float
+    )
+    
+    parser.add_argument(
+        "--inference_method", "-im",
+        help="which inference tool will you use?",
+        required=True,
+        choices=['dice_flat','direct','storm']
+    )
+    
+    parser.add_argument(
+        "--inference_set", "-is",
+        help="which set of inputs and outputs will you perform inference on",
+        required=True,
+        choices=['exhaustive','min_representative']
+    )
+
+    parser.add_argument(
+        "--comparison_set", "-cs",
+        help="which set of inputs, neighbors, and outputs will you perform comparison on",
+        required=True,
+        choices=['exhaustive','rr_2n']
+    )
+
+    parser.add_argument(
+        "--timeout", '-to',
+        help="timeout for inference in seconds",
+        required=True,
+        type=int
+    )
+
+    parser.add_argument(
+        "--official",
+        help="this flag means the results will be stored as official experiment results",
+        default=False,
+        action='store_true')
+    
+    parser.add_argument(
+        "--get_examples",
+        help="if this flag is used, a file is saved which lists the examples in order of ratio",
+        default=False,
+        action='store_true')
+
+    args = parser.parse_args()
+    
+    mech_args = {}
+    if args.mechanism == 'rr':
+        mech_args['n'] = args.num_clients
+        mech_args['lamb'] = args.lamb
+    elif args.mechanism == 'above_threshold':
+        mech_args['list_length'] = args.num_clients
+        mech_args['max_int_value'] = args.max_int_value
+        mech_args['threshold'] = args.threshold
+        if args.threshold > args.max_int_value: raise ValueError('Cannot have threshold value larger than max int value')
+        mech_args['lamb'] = args.lamb
+    else: raise NotImplementedError
+    
+    exp = RunPrivacy(mechanism=args.mechanism, mechanism_params=mech_args, inference_method=args.inference_method,inference_set=args.inference_set,comparison_set=args.comparison_set,timeout=args.timeout,official=args.official,get_examples=args.get_examples)
+
+    exp.run()

@@ -1,0 +1,9 @@
+__pycache__/
+*.bak
+mechanisms/
+stats/
+temp_results/
+final_results/
+logging
+*.pdf
+
